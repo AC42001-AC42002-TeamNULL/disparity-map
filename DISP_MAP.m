@@ -15,8 +15,10 @@ image_2 = padarray(image_1, [support_window_size support_window_size], NaN, 'bot
  %   for j = 1 + support_window_size:size(image_1, 2) - support_window_size  
  for i = 1:size(image_1, 1)
      for j = 1:size(image_1, 2)
+         if i - support_window_size > 0 && i + support_window_size < size(image_1, 1) && j - support_window_size > 0 && j + support_window_size > size(image_1, 2)
             support_window = image_2(i - support_window_size: i + support_window_size, j - support_window_size: j + support_window_size);
             image_1(i,j) = PIXEL_DISP(image_1(i,j), support_window);
+         end
     end
 end
 %% Normalise
