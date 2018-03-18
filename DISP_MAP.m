@@ -1,4 +1,4 @@
-function DISP_MAP(image_1, image_2, output_image, support_window_size)
+function DISP_MAP(image_1, image_2, support_window_size, is_grey)
 %% Validate odd support window
 if bitget(support_window_size, 1)
     support_window_size = floor(support_window_size/2);
@@ -6,8 +6,13 @@ else
     error('Error. support window size must be an odd number');
 end
 %% Read image files and convert to grayscale
-image_1 = rgb2gray(imread(image_1));
-image_2 = rgb2gray(imread(image_2));
+if is_grey
+    image_1 = imread(image_1);
+    image_2 = imread(image_2);
+else
+    image_1 = rgb2gray(imread(image_1));
+    image_2 = rgb2gray(imread(image_2));
+end
 %% Padding
 image_2 = padarray(image_1, [support_window_size support_window_size], NaN, 'both');
 %% Call PIXEL_DISP on each pixel
@@ -22,7 +27,6 @@ image_2 = padarray(image_1, [support_window_size support_window_size], NaN, 'bot
     end
 end
 %% Normalise
-image_1;
 normalisedImage = uint8(255*mat2gray(image_1));
 %% Show image
 figure
