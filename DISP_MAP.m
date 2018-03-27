@@ -39,7 +39,7 @@ for r = (1+support_window_size):(R+support_window_size) % Row
         end
     end
 end
-
+padded_dmap_image = padded_dmap_image(1+support_window_size:R+support_window_size, 1+support_window_size:C+support_window_size);
 normalisedImage = uint8(255*mat2gray(padded_dmap_image));
 
 imshow(normalisedImage);
