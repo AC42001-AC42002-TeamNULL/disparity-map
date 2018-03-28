@@ -1,4 +1,3 @@
-function [difference] = SUPPORT_CMP(matrix_1, matrix_2)
-% Compute difference with SSD (Sum of squared differences) of two matrices
-difference = 0 - sumsqr( matrix_1(:) - matrix_2(:) );
+function [disp] = SUPPORT_CMP(matrix_1, matrix_2)
+disp = SSD(matrix_1, matrix_2);
 end

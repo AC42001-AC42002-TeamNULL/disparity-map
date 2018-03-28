@@ -1,16 +1,27 @@
-function [dmap_image] = DISP_MAP(left_image, right_image, support_window_size, search_scale, is_gray, is_rectified)
-%% Read image files and convert to grayscale
-if is_gray
-    left_image = imread(left_image);
-    right_image = imread(right_image);
-else
-    left_image = rgb2gray(imread(left_image));
-    right_image = rgb2gray(imread(right_image));
+function [dmap_image] = DISP_MAP(left_image, right_image, support_window_size, search_scale, is_colour, is_rectified)
+%% Confirm that support_window_size is odd value
+if mod(support_window_size, 2) == 0
+    error('Error. Support window must be odd value.');
 end
-%% Iterate over left and right images, generating a disparity map from left to right with left as reference image
-[R, C, ~] = size(left_image); % Assumes both images are the same size
+%% Confirm that support_window_size and search scale are 0 divisable
+if mod(support_window_size, search_scale) ~= 0
+    error('Error. Support window and search scale are not divisable.');
+end
+%% Read image files
+left_image = imread(left_image);
+right_image = imread(right_image);
+%% Confirm input images are the same size, else error
+if size(left_image) ~= size(right_image)
+    error('Error. Images must be the same shape.');
+end
+%% Convert to grayscale if colour images
+if is_colour
+    left_image = rgb2gray(left_image);
+    right_image = rgb2gray(right_image);
+end
+%%
+[R, C, ~] = size(left_image);
 
-% Pad our images with zeros to avoid out-of-bounds errors
 padded_reference_image = padarray(left_image,[support_window_size,support_window_size], 'both');
 padded_nonreference_image = padarray(right_image,[support_window_size*search_scale,support_window_size*search_scale], 'both');
 
@@ -19,46 +30,50 @@ padded_dmap_image = padarray(dmap_image,[support_window_size,support_window_size
 
 search_support_diff = (support_window_size*search_scale) - support_window_size;
 
-% Iterate over the reference image by column into row
-for r = (1+support_window_size):(R+support_window_size) % Row
-    for c = (1+support_window_size):(C+support_window_size) % Column
-        % ADD RECTIFICATION CHECK HERE FOR IS_ELONGATED
+for r = (1+support_window_size)/2:R % Row
+    for c = (1+support_window_size)/2:C % Column
+        %% Get our support window for this current iteration
+        support_x1 = r+1;
+        support_x2 = r+support_window_size;
+        support_y1 = c+1;
+        support_y2 = c+support_window_size;
         
-        % Define our support window as a segment of our reference image
-        support_window = padded_reference_image(r:r+support_window_size-1, c:c+support_window_size-1);
+        support_window = padded_reference_image(support_x1:support_x2, support_y1:support_y2);
+        %% Get our search window for this current iteration
+        search_x1 = (r+1)+search_support_diff;
+        search_x2 = (r+support_window_size)+search_support_diff;
+        search_y1 = (c+1)+search_support_diff;
+        search_y2 = (c+support_window_size*search_scale)+search_support_diff;
         
-        % Define our search window as a segment of our non-reference image
-        x1 = r+search_support_diff;
-        x2 = r+search_support_diff+support_window_size-1;
-        y1 = c+search_support_diff;
-        y2 = (c+search_support_diff*search_scale-1)-support_window_size;
+        search_window = padded_nonreference_image(search_x1:search_x2, search_y1:search_y2);
         
-        search_window = padded_nonreference_image(x1:x2, y1:y2);
+        [M, N, ~] = size(support_window);
+        prev_col = 0;
+        best_disp = -99999999;
         
-        prev_search_col = 0;
-        min_diff = -2147483648;
-        
-        %% Iterate over the search window and find the best matching window difference of the support window using a similiarity metric
-        for win_scale = 1:search_scale
-            if win_scale == 1
-                inner_search_window = search_window(: , 1:prev_search_col+support_window_size);
+        %% Iterate over our search window, using our support window for comparison and populate our dmap_image with disparity values
+        for win = 1:search_scale
+            %% Retrieve the inner_search_window as a sub-window of the search_window
+            if win == 1
+                inner_search_window = search_window(: , 1:support_window_size);
             else
-                inner_search_window = search_window(: , 1+prev_search_col:prev_search_col+support_window_size);
+                inner_search_window = search_window(: , 1+prev_col:win*support_window_size);
             end
-            [~, psC, ~] = size(inner_search_window);
-            prev_search_col = psC;
+            prev_col = prev_col + support_window_size;
             
-            diff = SUPPORT_CMP(support_window, inner_search_window);
-            
-            if diff > min_diff
-                min_diff = diff;
+            %% Compare the support window to the retrieved inner_search_window
+            disp = SUPPORT_CMP(support_window, inner_search_window);
+            %% Check if the current window disp is less than the previous window
+            if disp > best_disp
+                best_disp = disp;
             end
         end
-        
-        padded_dmap_image(r,c) = min_diff;
+        %% Insert the best disparity value into our zeroed dmap_image
+        x1 = r+1*2;
+        y1 = c+1*2;
+        padded_dmap_image(x1,y1) = best_disp;
     end
 end
-padded_dmap_image(1+support_window_size:R+support_window_size, 1+support_window_size:C+support_window_size);
 normalisedImage = uint8(255*mat2gray(padded_dmap_image));
 imshow(normalisedImage);
 dmap_image = 1;
