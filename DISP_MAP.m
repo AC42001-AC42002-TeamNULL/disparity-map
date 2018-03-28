@@ -53,17 +53,30 @@ for column = 1 : size(left_image, 1)
                 calculation = sum(X(:).^2);
                 if calculation > distance
                     distance = calculation;
-                    %calcdist = sqrt((column + search_region_column)^2)
-                    %calcdist = sqrt(((search_region_column + size(left_support_window, 1)/2 - 1) - column)^2 + ...
-                    %    ((search_region_row + size(left_support_window, 2)/2 - 1) - row)^2); 
+                    %calcdist = sqrt((column - search_region_column + size(left_support_window, 1)/2 - 1)^2);
+                    calcdist = sqrt(((search_region_column + size(left_support_window, 1)/2 - 1) - column)^2 + ...
+                        ((search_region_row + size(left_support_window, 2)/2 - 1) - row)^2); 
                 end
             end
         end
-        if distance > 0.5
-            output(column, row) = distance;
+        if calcdist < 100
+            output(column, row) = calcdist / 10;
         else
-            output(column, row) = distance / 2;
+            output(column, row) = calcdist;
         end
+        %{
+        if distance > 0.5
+            output(column, row) = calcdist;
+            %output(column, row) = distance;
+        else
+            if calcdist < 10
+                output(column, row) = calcdist / 10;
+            else
+                output(column, row) = calcdist / 2;
+            end
+            %output(column, row) = distance / 2;
+    end
+    %}
     end
 end
 %{
@@ -84,7 +97,6 @@ left_image = padarray(left_image, [support_window_size support_window_size], NaN
 end
 %}
 %% Normalise
-output
 normalisedImage = uint8(255*mat2gray(output));
 normalisedImage = uint8(255) - normalisedImage;
 
